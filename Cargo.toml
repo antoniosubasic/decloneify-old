@@ -1,0 +1,11 @@
+[package]
+name = "decloneify"
+version = "0.1.0"
+edition = "2021"
+authors = ["Antonio Subašić <antonio@subasic.me>"]
+description = "a simple Spotify duplicate-tracks removal tool"
+repository = "https://github.com/antoniosubasic/decloneify"
+license-file = "LICENSE"
+keywords = ["spotify", "duplicate", "tracks", "removal", "tool", "rust", "cli"]
+
+[dependencies]
