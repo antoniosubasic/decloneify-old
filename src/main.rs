@@ -1,6 +1,8 @@
+mod playlist;
 mod token;
 
 use dotenv::dotenv;
+use playlist::{Playlist, PlaylistResponse};
 use reqwest::Client;
 use std::env;
 use token::Token;
@@ -8,16 +10,14 @@ use token::Token;
 struct Spotify<'a> {
     client_id: &'a str,
     client_secret: &'a str,
-    user_id: &'a str,
     access_token: Option<Token>,
 }
 
 impl<'a> Spotify<'a> {
-    fn new(client_id: &'a str, client_secret: &'a str, user_id: &'a str) -> Self {
+    fn new(client_id: &'a str, client_secret: &'a str) -> Self {
         Self {
             client_id,
             client_secret,
-            user_id,
             access_token: None,
         }
     }
@@ -56,6 +56,31 @@ impl<'a> Spotify<'a> {
             Err(e) => Err(e.to_string()),
         }
     }
+
+    async fn get_user_playlists(&mut self, user_id: &str) -> Result<Vec<Playlist>, String> {
+        self.request_access_token().await?;
+
+        let token = self.access_token.as_ref().unwrap();
+        let response = Client::new()
+            .get(format!(
+                "https://api.spotify.com/v1/users/{}/playlists",
+                user_id
+            ))
+            .header("Authorization", format!("Bearer {}", token.access_token))
+            .send()
+            .await;
+
+        match response {
+            Ok(response) => match response.status().is_success() {
+                true => match response.json::<PlaylistResponse>().await {
+                    Ok(playlist_response) => Ok(playlist_response.items),
+                    Err(e) => Err(e.to_string()),
+                },
+                false => Err(response.text().await.unwrap()),
+            },
+            Err(e) => Err(e.to_string()),
+        }
+    }
 }
 
 #[tokio::main]
@@ -66,5 +91,14 @@ async fn main() {
     let client_secret = env::var("CLIENT_SECRET").expect("CLIENT_SECRET must be set");
     let user_id = env::var("USER_ID").expect("USER_ID must be set");
 
-    let mut spotify = Spotify::new(&client_id, &client_secret, &user_id);
+    let mut spotify = Spotify::new(&client_id, &client_secret);
+
+    match spotify.get_user_playlists(&user_id).await {
+        Ok(playlists) => {
+            for playlist in playlists {
+                println!("{}", playlist.name);
+            }
+        }
+        Err(e) => eprintln!("{}", e),
+    }
 }
