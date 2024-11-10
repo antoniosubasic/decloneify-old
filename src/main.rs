@@ -26,13 +26,14 @@ fn get_env_var(key: &str) -> String {
     match env::var(key) {
         Ok(val) => val,
         Err(_) => {
-            print!("enter your {}: ", key);
+            print!("{}: ", key);
+            std::io::stdout().flush().unwrap();
+
             let mut val = String::new();
             std::io::stdin().read_line(&mut val).unwrap();
             let val = val.trim().to_string();
 
             write_to_env_file(key, &val);
-
             val
         }
     }
